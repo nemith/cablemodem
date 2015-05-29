@@ -25,19 +25,24 @@ func printJSON(v interface{}) {
 
 }
 
-func cmdStatus(c *cli.Context) {
-	status, err := cm.Status()
+func cmdInfo(c *cli.Context) {
+	info, err := cm.Info()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Could not get cable modem status: %s", err)
 		return
 	}
 
 	if c.GlobalBool("json") {
-		printJSON(status)
+		printJSON(info)
 		return
 	}
 
-	fmt.Printf("Uptime: %s\n", status.Uptime)
+	fmt.Printf("Serial Number        : %s\n", info.Serial)
+	fmt.Printf("Uptime               : %s\n", info.Uptime)
+	fmt.Printf("HFC Mac Address      : %s\n", info.HFCMac.StringCisco())
+	fmt.Printf("Ethernet Mac Address : %s\n", info.EthernetMac.StringCisco())
+	fmt.Printf("Ethernet IP          : %s\n", info.EthernetIP)
+
 }
 
 func cmdChannel(c *cli.Context) {
@@ -107,10 +112,10 @@ func main() {
 			Action:  cmdChannel,
 		},
 		{
-			Name:    "status",
-			Aliases: []string{"s"},
-			Usage:   "cable modem status",
-			Action:  cmdStatus,
+			Name:    "info",
+			Aliases: []string{"i"},
+			Usage:   "cable modem information",
+			Action:  cmdInfo,
 		},
 	}
 	app.Before = func(c *cli.Context) error {

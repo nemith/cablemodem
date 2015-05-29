@@ -11,12 +11,46 @@ import (
 
 // CableModem is a common interface for returning cable modem stats.
 type Modem interface {
-	Status() (*Status, error)
+	Info() (*Info, error)
 	SignalData() (*SignalData, error)
 }
 
-type Status struct {
-	Uptime time.Duration `json:"uptime"`
+type MacAddress struct {
+	mac []byte
+}
+
+func NewMacAddress(mac string) MacAddress {
+	return MacAddress{[]byte(mac)}
+}
+
+func (m MacAddress) StringCisco() string {
+	return fmt.Sprintf("%s.%s.%s", m.mac[0:4], m.mac[4:8], m.mac[8:12])
+}
+
+func (m MacAddress) StringFancy() string {
+	return fmt.Sprintf("%s:%s:%s:%s:%s:%s",
+		m.mac[0:2], m.mac[2:4], m.mac[4:6],
+		m.mac[6:8], m.mac[8:10], m.mac[10:12])
+}
+
+func (m *MacAddress) String() string {
+	return fmt.Sprintf("%s", m.mac)
+}
+
+func (m *MacAddress) MarshalText() ([]byte, error) {
+	return m.mac, nil
+}
+
+type Info struct {
+	Model           string        `json:"model"`
+	Vendor          string        `json:"vendor"`
+	HardwareVersion string        `json:"hardware_version"`
+	Firmware        string        `json:"firmware"`
+	Serial          string        `json:"serial_number"`
+	HFCMac          MacAddress    `json:"hfc_mac"`
+	EthernetMac     MacAddress    `json:"ethernet_mac"`
+	EthernetIP      string        `json:"ethernet_ip"`
+	Uptime          time.Duration `json:"uptime"`
 }
 
 // DownstreamChannel is all data/stats for a downstream cabel modem channel.

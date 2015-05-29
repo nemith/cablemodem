@@ -36,7 +36,12 @@ func parseUptime(s string) time.Duration {
 		time.Second*time.Duration(mustAtoi(matches[4]))
 }
 
-func (cm *SurfboardCM) Status() (*Status, error) {
+func parseMac(s string) MacAddress {
+	s = strings.Replace(s, "-", "", -1)
+	return NewMacAddress(strings.ToLower(s))
+}
+
+func (cm *SurfboardCM) Info() (*Info, error) {
 	u := cm.baseURL
 	u.Path = "indexData.htm"
 	doc, err := fetchDoc(u)
@@ -49,15 +54,39 @@ func (cm *SurfboardCM) Status() (*Status, error) {
 		return nil, err
 	}
 	data, _ := parseTable(opTable)
-	status := &Status{}
+	info := &Info{}
 	for key, val := range data {
 		switch key {
 		case "System Up Time":
-			status.Uptime = parseUptime(val[0])
+			info.Uptime = parseUptime(val[0])
 		}
 	}
 
-	return status, nil
+	u.Path = "cmAddressData.htm"
+	doc, err = fetchDoc(u)
+	if err != nil {
+		return nil, err
+	}
+
+	addTable, err := findTable(doc, "Item")
+	if err != nil {
+		return nil, err
+	}
+	data, _ = parseTable(addTable)
+	for key, val := range data {
+		switch key {
+		case "Serial Number":
+			info.Serial = val[0]
+		case "HFC MAC Address":
+			info.HFCMac = parseMac(val[0])
+		case "Ethernet IP Address":
+			info.EthernetIP = val[0]
+		case "Ethernet MAC Address":
+			info.EthernetMac = parseMac(val[0])
+		}
+	}
+
+	return info, nil
 }
 
 func (cm *SurfboardCM) SignalData() (*SignalData, error) {
