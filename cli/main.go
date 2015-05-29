@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 
@@ -14,10 +15,44 @@ const (
 
 var cm cablemodem.Modem
 
-func cmdChannel(c *cli.Context) {
-	signal := cm.SignalData()
+func printJSON(v interface{}) {
+	output, err := json.MarshalIndent(v, "", "  ")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Couldn't encode data: %s", err)
+		return
+	}
+	fmt.Printf("%s", output)
 
-	fmt.Println("Upstream Channels")
+}
+
+func cmdStatus(c *cli.Context) {
+	status, err := cm.Status()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Could not get cable modem status: %s", err)
+		return
+	}
+
+	if c.GlobalBool("json") {
+		printJSON(status)
+		return
+	}
+
+	fmt.Printf("Uptime: %s\n", status.Uptime)
+}
+
+func cmdChannel(c *cli.Context) {
+	signal, err := cm.SignalData()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Could not get signal data: %s", err)
+		return
+	}
+
+	if c.GlobalBool("json") {
+		printJSON(signal)
+		return
+	}
+
+	fmt.Println("Upstream Channels:")
 	for _, c := range signal.Upstream {
 		fmt.Printf("  Channel: %d\n", c.ID)
 		fmt.Printf("    Frequency          : %d Mhz\n", c.Freq/1000/1000)
@@ -28,7 +63,7 @@ func cmdChannel(c *cli.Context) {
 	}
 	fmt.Println("")
 
-	fmt.Println("Downstream Channels")
+	fmt.Println("Downstream Channels:")
 	for _, c := range signal.Downstream {
 		fmt.Printf("  Channel: %d\n", c.ID)
 		fmt.Printf("    Frequency      : %d Mhz\n", c.Freq/1000/1000)
@@ -59,6 +94,10 @@ func main() {
 			Name:  "host",
 			Usage: fmt.Sprintf("Hostname/IP for cablemodem (defaults to %s)", defaultHost),
 		},
+		cli.BoolFlag{
+			Name:  "json",
+			Usage: "Output data in json",
+		},
 	}
 	app.Commands = []cli.Command{
 		{
@@ -66,6 +105,12 @@ func main() {
 			Aliases: []string{"c"},
 			Usage:   "channel stats",
 			Action:  cmdChannel,
+		},
+		{
+			Name:    "status",
+			Aliases: []string{"s"},
+			Usage:   "cable modem status",
+			Action:  cmdStatus,
 		},
 	}
 	app.Before = func(c *cli.Context) error {
